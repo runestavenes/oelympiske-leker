@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Score Entry — Ølympiske Leker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="page-header">
+        <h1 class="site-title">🏅 Enter Your Score</h1>
+        <nav class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="admin.html">Admin</a>
+        </nav>
+    </header>
+
+    <main class="score-main">
+        <div id="undo-bar" class="undo-bar hidden">
+            <button id="undo-btn" class="btn btn-secondary">↩️ Undo Last Score</button>
+        </div>
+
+        <!-- Next-game overlay (shown after submitting) -->
+        <div id="next-overlay" class="next-overlay hidden">
+            <div class="next-overlay-content">
+                <h2>✅ Score Saved!</h2>
+                <div id="next-info"></div>
+            </div>
+        </div>
+
+        <!-- Pending matches list -->
+        <div id="match-list" class="match-list"></div>
+
+        <!-- Score entry form (shown when a match is selected) -->
+        <div id="score-form" class="score-form hidden">
+            <div class="score-form-inner">
+                <h2 id="form-title"></h2>
+                <p id="form-activity" class="form-activity"></p>
+
+                <!-- Numeric score inputs -->
+                <div id="numeric-inputs" class="score-inputs">
+                    <div class="score-team">
+                        <span id="team-a-label" class="team-label"></span>
+                        <div class="stepper">
+                            <button class="btn btn-stepper" onclick="adjustScore('a', -1)">−</button>
+                            <span id="score-a-display" class="score-display">0</span>
+                            <button class="btn btn-stepper" onclick="adjustScore('a', 1)">+</button>
+                        </div>
+                    </div>
+                    <div class="score-vs">VS</div>
+                    <div class="score-team">
+                        <span id="team-b-label" class="team-label"></span>
+                        <div class="stepper">
+                            <button class="btn btn-stepper" onclick="adjustScore('b', -1)">−</button>
+                            <span id="score-b-display" class="score-display">0</span>
+                            <button class="btn btn-stepper" onclick="adjustScore('b', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Win/Lose/Draw toggle (for winlose activities) -->
+                <div id="winlose-inputs" class="score-inputs hidden">
+                    <button id="wl-team-a" class="btn btn-winlose" onclick="setWinner('a')">
+                        <span id="wl-a-label"></span> Wins 🏆
+                    </button>
+                    <button id="wl-draw" class="btn btn-winlose" onclick="setWinner('draw')">
+                        🤝 Draw
+                    </button>
+                    <button id="wl-team-b" class="btn btn-winlose" onclick="setWinner('b')">
+                        <span id="wl-b-label"></span> Wins 🏆
+                    </button>
+                </div>
+
+                <!-- Confirm / cancel -->
+                <div id="confirm-bar" class="confirm-bar hidden">
+                    <p id="confirm-text" class="confirm-text"></p>
+                    <div class="btn-group">
+                        <button class="btn btn-primary btn-large" onclick="confirmSubmit()">✓ Confirm</button>
+                        <button class="btn btn-secondary btn-large" onclick="cancelConfirm()">✕ Cancel</button>
+                    </div>
+                </div>
+
+                <div id="submit-bar" class="btn-group" style="margin-top:1.5rem;">
+                    <button class="btn btn-primary btn-large" onclick="requestConfirm()">Submit Score</button>
+                    <button class="btn btn-secondary btn-large" onclick="closeForm()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/data.js"></script>
+    <script src="js/schedule.js"></script>
+    <script src="js/scoring.js"></script>
+    <script src="js/score-entry.js"></script>
+</body>
+</html>

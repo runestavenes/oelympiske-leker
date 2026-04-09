@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Ølympiske Leker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dashboard-body">
+    <header class="dashboard-header">
+        <h1 class="dashboard-title">🍻 Ølympiske Leker 🏆</h1>
+        <div id="progress-bar" class="progress-container">
+            <div id="progress-fill" class="progress-fill"></div>
+            <span id="progress-text" class="progress-text"></span>
+        </div>
+    </header>
+
+    <div class="dashboard-grid">
+        <!-- Left: Leaderboard -->
+        <section class="dashboard-panel leaderboard-panel">
+            <h2 class="panel-title">🏅 Leaderboard</h2>
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Team</th>
+                        <th>W</th>
+                        <th>D</th>
+                        <th>L</th>
+                        <th>Win%</th>
+                        <th>Pts</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body"></tbody>
+            </table>
+        </section>
+
+        <!-- Right: Active games + recent results -->
+        <section class="dashboard-panel games-panel">
+            <h2 class="panel-title">🎯 Active Games</h2>
+            <div id="active-games"></div>
+
+            <h2 class="panel-title" style="margin-top:1.5rem;">📣 Recent Results</h2>
+            <div id="recent-results"></div>
+        </section>
+    </div>
+
+    <!-- Per-activity leaderboard (expandable) -->
+    <div id="activity-leaderboards" class="activity-leaderboards-bar"></div>
+
+    <!-- Bottom ticker -->
+    <footer class="dashboard-ticker">
+        <div id="ticker-content" class="ticker-scroll"></div>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/schedule.js"></script>
+    <script src="js/scoring.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
