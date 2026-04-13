@@ -368,7 +368,7 @@ function addRomanticObs() {
     setRomanticObs(obs);
     document.getElementById('romantic-text-input').value = '';
     renderRomantic();
-    showToast('Romantisk observasjon added (+2 wins) ✓');
+    showToast('Romantisk observasjon added (+1 win) ✓');
 }
 
 function removeRomanticObs(id) {
@@ -393,7 +393,7 @@ function renderRomantic() {
             <div class="match-row match-done">
                 <span class="match-teams"><strong>${escapeHtml(teamName)}</strong></span>
                 <span class="match-activity" style="flex:1;">${escapeHtml(o.text)}</span>
-                <span class="match-score">+2 W</span>
+                <span class="match-score">+1 W</span>
                 <button class="btn btn-small btn-danger" onclick="removeRomanticObs(${o.id})" title="Remove">✕</button>
             </div>`;
     }).join('');
@@ -467,7 +467,9 @@ function renderSchedule() {
 
             const editBtn = m.status === 'finished'
                 ? `<button class="btn btn-small btn-secondary" onclick="editMatchScore(${m.matchId})" title="Edit score">✏️</button>`
-                : '';
+                : `<button class="btn btn-small btn-secondary" onclick="editMatchScore(${m.matchId})" title="Set score">✏️</button>`;
+            
+            const deleteBtn = `<button class="btn btn-small btn-danger" onclick="deleteMatch(${m.matchId})" title="Delete match">✕</button>`;
 
             html += `
                 <div class="match-row ${statusClass}">
@@ -475,6 +477,7 @@ function renderSchedule() {
                     <span class="match-teams">${escapeHtml(aName)} vs ${escapeHtml(bName)}</span>
                     <span class="match-score">${scoreText}</span>
                     ${editBtn}
+                    ${deleteBtn}
                 </div>`;
         });
         html += '</div>';
@@ -492,11 +495,19 @@ function editMatchScore(matchId) {
 
     const aName = getTeamName(match.teamA);
     const bName = getTeamName(match.teamB);
+    const act = getActivityById(match.activityId);
 
-    const newScoreA = prompt(aName + ' score (current: ' + match.scoreA + '):', match.scoreA);
-    if (newScoreA === null) return;
-    const newScoreB = prompt(bName + ' score (current: ' + match.scoreB + '):', match.scoreB);
-    if (newScoreB === null) return;
+    // Get current scores or defaults
+    const currentA = match.scoreA !== null && match.scoreA !== undefined ? match.scoreA : 0;
+    const currentB = match.scoreB !== null && match.scoreB !== undefined ? match.scoreB : 0;
+
+    // Prompt for Team A score
+    const newScoreA = prompt(`Enter score for ${aName}:\n(Current: ${currentA})`, currentA);
+    if (newScoreA === null) return; // User cancelled
+
+    // Prompt for Team B score
+    const newScoreB = prompt(`Enter score for ${bName}:\n(Current: ${currentB})`, currentB);
+    if (newScoreB === null) return; // User cancelled
 
     const parsedA = parseInt(newScoreA, 10);
     const parsedB = parseInt(newScoreB, 10);
@@ -506,12 +517,49 @@ function editMatchScore(matchId) {
         return;
     }
 
+    // Validate against activity min/max if available
+    if (act) {
+        if (parsedA < act.min || parsedA > act.max || parsedB < act.min || parsedB > act.max) {
+            showToast(`Scores must be between ${act.min} and ${act.max}!`, 'error');
+            return;
+        }
+    }
+
+    // Update match
+    match.status = 'finished';
     match.scoreA = parsedA;
     match.scoreB = parsedB;
+    if (!match.timestamp) {
+        match.timestamp = Date.now();
+    }
     setSchedule(schedule);
     renderSchedule();
     renderPreTournament();
     showToast('Score updated ✓');
+}
+
+// ── Delete match ──────────────────────────────────────────────
+
+function deleteMatch(matchId) {
+    const schedule = getSchedule();
+    const match = schedule.find(m => m.matchId === matchId);
+    if (!match) return;
+
+    const aName = getTeamName(match.teamA);
+    const bName = getTeamName(match.teamB);
+    const act = getActivityById(match.activityId);
+    const actName = act ? act.name : match.activityId;
+
+    const confirmMsg = `Delete this match?\n\n${actName}: ${aName} vs ${bName}` +
+        (match.status === 'finished' ? `\n(Score: ${match.scoreA} – ${match.scoreB})` : '');
+
+    if (!confirm(confirmMsg)) return;
+
+    // Remove the match from schedule
+    const updatedSchedule = schedule.filter(m => m.matchId !== matchId);
+    setSchedule(updatedSchedule);
+    renderSchedule();
+    showToast('Match deleted ✓');
 }
 
 // ── Data management ───────────────────────────────────────────

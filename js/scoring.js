@@ -109,18 +109,20 @@ function calculateLeaderboard(teams, schedule, activities) {
         if (entry.result === 'lose') { s.losses++; }
     });
 
-    // Accumulate romantic observations (2 wins each, no points)
+    // Accumulate romantic observations (1 win each, no points)
     const romanticObs = getRomanticObs();
     romanticObs.forEach(entry => {
         const s = stats[entry.teamId];
         if (s) {
-            s.wins += 2;
+            s.wins += 1;
         }
     });
 
-    // Sort: wins first, points as tiebreaker
+    // Sort: (wins - losses) first, then points as tiebreaker
     return Object.values(stats).sort((a, b) => {
-        if (b.wins !== a.wins) return b.wins - a.wins;
+        const netA = a.wins - a.losses;
+        const netB = b.wins - b.losses;
+        if (netB !== netA) return netB - netA;
         return b.totalPoints - a.totalPoints;
     });
 }

@@ -19,6 +19,12 @@
     </header>
 
     <main class="score-main">
+        <!-- Toggle between score entry and romantic observations -->
+        <div class="tab-bar" style="margin-bottom:1.5rem;">
+            <button class="tab-btn active" id="toggle-scores" onclick="switchView('scores')">🏅 Enter Scores</button>
+            <button class="tab-btn" id="toggle-romantic" onclick="switchView('romantic')">💕 Romantiske Observasjoner</button>
+        </div>
+
         <div id="undo-bar" class="undo-bar hidden">
             <button id="undo-btn" class="btn btn-secondary">↩️ Undo Last Score</button>
         </div>
@@ -31,10 +37,31 @@
             </div>
         </div>
 
-        <!-- Pending matches list -->
-        <div id="match-list" class="match-list"></div>
+        <!-- Score Entry View (default) -->
+        <div id="scores-view" class="view-section">
+            <!-- Pending matches list -->
+            <div id="match-list" class="match-list"></div>
+        </div>
 
-        <!-- Score entry form (shown when a match is selected) -->
+        <!-- Romantic Observations View -->
+        <div id="romantic-view" class="view-section hidden">
+            <div class="card" style="max-width:800px;margin:0 auto;">
+                <h2 style="font-family:'Bangers',cursive;color:#ffd166;margin-bottom:1rem;">💕 Romantiske Observasjoner</h2>
+                <p class="hint" style="margin-bottom:1.5rem;">Each observation gives a team <strong>1 win</strong> on the dashboard (no points). Type a description and select a team.</p>
+                
+                <div class="form-row" style="flex-wrap:wrap;gap:0.75rem;margin-bottom:1.5rem;">
+                    <input type="text" id="romantic-text-input" placeholder="What happened…" maxlength="100" style="flex:2;min-width:200px;">
+                    <select id="romantic-team-select" style="flex:1;min-width:150px;">
+                        <option value="">Select team…</option>
+                    </select>
+                    <button id="add-romantic-btn" class="btn btn-primary" onclick="addRomanticObs()">+ Add 💕</button>
+                </div>
+                
+                <div id="romantic-list"></div>
+            </div>
+        </div>
+
+        <!-- Score entry form (shown when a match is selected in scores view) -->
         <div id="score-form" class="score-form hidden">
             <div class="score-form-inner">
                 <h2 id="form-title"></h2>

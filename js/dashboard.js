@@ -98,7 +98,7 @@ function renderActiveGames() {
     const container = document.getElementById('active-games');
 
     // Show next few pending games (grouped loosely by round)
-    const shown = pending.slice(0, 10);
+    const shown = pending.slice(0, 8);
 
     if (shown.length === 0) {
         container.innerHTML = '<p class="empty-state-small">🎉 All games finished!</p>';
@@ -123,17 +123,18 @@ function renderActiveGames() {
 function renderRecentResults() {
     const schedule = getSchedule();
     const activities = getActivities();
-    const recent = getRecentResults(schedule, 5);
     const romanticObs = getRomanticObs();
     const container = document.getElementById('recent-results');
 
     const actMap = {};
     activities.forEach(a => { actMap[a.id] = a; });
 
-    // Build combined list: match results + romantic observations
-    const items = [];
+    // Build combined list: match results + romantic observations, sorted by timestamp
+    const allResults = [];
 
-    recent.forEach(m => {
+    // Add finished matches
+    schedule.forEach(m => {
+        if (m.status !== 'finished') return;
         const act = actMap[m.activityId];
         const aName = getTeamName(m.teamA);
         const bName = getTeamName(m.teamB);
@@ -146,37 +147,46 @@ function renderRecentResults() {
             else resultClass = 'result-draw';
         }
 
-        items.push(`
-            <div class="game-row game-done ${resultClass}">
-                <span class="game-activity">${escapeHtml(act ? act.name : m.activityId)}</span>
-                <span class="game-teams">
-                    ${escapeHtml(aName)} <strong>${m.scoreA}</strong>
-                    – <strong>${m.scoreB}</strong> ${escapeHtml(bName)}
-                </span>
-                ${pts ? `<span class="game-pts">+${pts.teamA} / +${pts.teamB}</span>` : ''}
-            </div>`);
+        allResults.push({
+            timestamp: m.timestamp || 0,
+            html: `
+                <div class="game-row game-done ${resultClass}">
+                    <span class="game-activity">${escapeHtml(act ? act.name : m.activityId)}</span>
+                    <span class="game-teams">
+                        ${escapeHtml(aName)} <strong>${m.scoreA}</strong>
+                        – <strong>${m.scoreB}</strong> ${escapeHtml(bName)}
+                    </span>
+                    ${pts ? `<span class="game-pts">+${pts.teamA} / +${pts.teamB}</span>` : ''}
+                </div>`
+        });
     });
 
-    // Add romantic observations (most recent first)
-    const recentRomantic = romanticObs.slice().reverse().slice(0, 5);
-    recentRomantic.forEach(o => {
+    // Add romantic observations
+    romanticObs.forEach(o => {
         const teamName = getTeamName(o.teamId);
-        items.push(`
-            <div class="game-row game-done romantic-result">
-                <span class="game-activity">💕</span>
-                <span class="game-teams">
-                    <strong>${escapeHtml(teamName)}</strong> — ${escapeHtml(o.text)}
-                </span>
-                <span class="game-pts">+2 W</span>
-            </div>`);
+        allResults.push({
+            timestamp: o.timestamp || 0,
+            html: `
+                <div class="game-row game-done romantic-result">
+                    <span class="game-activity">💕</span>
+                    <span class="game-teams">
+                        <strong>${escapeHtml(teamName)}</strong> — ${escapeHtml(o.text)}
+                    </span>
+                    <span class="game-pts">+1 W</span>
+                </div>`
+        });
     });
 
-    if (items.length === 0) {
+    if (allResults.length === 0) {
         container.innerHTML = '<p class="empty-state-small">No results yet</p>';
         return;
     }
 
-    container.innerHTML = items.join('');
+    // Sort by timestamp descending and take most recent 8
+    allResults.sort((a, b) => b.timestamp - a.timestamp);
+    const recentItems = allResults.slice(0, 8).map(r => r.html);
+
+    container.innerHTML = recentItems.join('');
 }
 
 // ── Ticker ────────────────────────────────────────────────────
@@ -309,7 +319,7 @@ function renderActivityLeaderboards() {
                         <thead><tr><th>#</th><th>Team</th><th>W</th></tr></thead>
                         <tbody>`;
             romanticSorted.forEach((s, i) => {
-                html += `<tr><td>${i + 1}</td><td>${escapeHtml(s.teamName)}</td><td>${s.count * 2}</td></tr>`;
+                html += `<tr><td>${i + 1}</td><td>${escapeHtml(s.teamName)}</td><td>${s.count}</td></tr>`;
             });
             html += '</tbody></table></div>';
         }

@@ -12,12 +12,18 @@ let overlayTimer = null;
 document.addEventListener('DOMContentLoaded', () => {
     renderMatchList();
     initUndo();
+    initRomanticView();
 
     // Listen for cross-tab data changes (e.g. admin adds schedule)
     onDataChange(() => {
         // Only refresh the list if no form is currently open
         if (currentMatchId === null) {
             renderMatchList();
+        }
+        // Also refresh romantic observations if visible
+        const romanticView = document.getElementById('romantic-view');
+        if (romanticView && !romanticView.classList.contains('hidden')) {
+            renderRomantic();
         }
     });
 });
@@ -211,6 +217,7 @@ function confirmSubmit() {
     match.status = 'finished';
     match.scoreA = currentScoreA;
     match.scoreB = currentScoreB;
+    match.timestamp = Date.now();
     setSchedule(schedule);
 
     // Show "next game" overlay
@@ -312,4 +319,122 @@ function showToast(message, type) {
     toast.textContent = message;
     toast.className = 'toast show' + (type === 'error' ? ' toast-error' : '');
     setTimeout(() => { toast.className = 'toast'; }, 3000);
+}
+
+// ── View Switching ────────────────────────────────────────────
+
+function switchView(view) {
+    const scoresView = document.getElementById('scores-view');
+    const romanticView = document.getElementById('romantic-view');
+    const toggleScores = document.getElementById('toggle-scores');
+    const toggleRomantic = document.getElementById('toggle-romantic');
+    const undoBar = document.getElementById('undo-bar');
+
+    if (view === 'scores') {
+        scoresView.classList.remove('hidden');
+        romanticView.classList.add('hidden');
+        toggleScores.classList.add('active');
+        toggleRomantic.classList.remove('active');
+        undoBar.classList.remove('hidden');
+        // Update undo bar visibility based on last action
+        const lastAction = getLastAction();
+        if (!lastAction) {
+            undoBar.classList.add('hidden');
+        }
+    } else if (view === 'romantic') {
+        scoresView.classList.add('hidden');
+        romanticView.classList.remove('hidden');
+        toggleScores.classList.remove('active');
+        toggleRomantic.classList.add('active');
+        undoBar.classList.add('hidden');
+        renderRomantic();
+    }
+}
+
+// ── Romantic Observations ─────────────────────────────────────
+
+function initRomanticView() {
+    populateRomanticDropdown();
+    renderRomantic();
+    
+    // Add enter key support for text input
+    const textInput = document.getElementById('romantic-text-input');
+    if (textInput) {
+        textInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') addRomanticObs();
+        });
+    }
+}
+
+function populateRomanticDropdown() {
+    const teams = getTeams();
+    const select = document.getElementById('romantic-team-select');
+    if (!select) return;
+    
+    select.innerHTML = '<option value="">Select team…</option>' +
+        teams.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+}
+
+function addRomanticObs() {
+    const textInput = document.getElementById('romantic-text-input');
+    const teamSelect = document.getElementById('romantic-team-select');
+    
+    if (!textInput || !teamSelect) return;
+    
+    const text = textInput.value.trim();
+    const teamId = parseInt(teamSelect.value, 10);
+
+    if (!text) {
+        showToast('Describe what happened!', 'error');
+        return;
+    }
+    if (!teamId) {
+        showToast('Select a team!', 'error');
+        return;
+    }
+
+    const obs = getRomanticObs();
+    const id = obs.length > 0 ? Math.max(...obs.map(o => o.id)) + 1 : 1;
+    obs.push({ id, teamId, text, timestamp: Date.now() });
+    setRomanticObs(obs);
+    
+    textInput.value = '';
+    teamSelect.selectedIndex = 0;
+    renderRomantic();
+    showToast('Romantisk observasjon added (+1 win) ✓');
+}
+
+function removeRomanticObs(id) {
+    if (!confirm('Remove this observation?')) return;
+    
+    const obs = getRomanticObs().filter(o => o.id !== id);
+    setRomanticObs(obs);
+    renderRomantic();
+    showToast('Observation removed ✓');
+}
+
+function renderRomantic() {
+    const container = document.getElementById('romantic-list');
+    if (!container) return;
+    
+    const obs = getRomanticObs();
+
+    if (obs.length === 0) {
+        container.innerHTML = '<p class="hint" style="text-align:center;padding:2rem 0;color:#a8b2d1;">No romantic observations yet. 💕</p>';
+        return;
+    }
+
+    // Show most recent first
+    const sorted = obs.slice().sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    
+    container.innerHTML = sorted.map(o => {
+        const teamName = getTeamName(o.teamId);
+        return `
+            <div class="match-row match-done" style="margin-bottom:0.5rem;">
+                <span class="match-teams" style="min-width:150px;"><strong>${escapeHtml(teamName)}</strong></span>
+                <span class="match-activity" style="flex:1;">${escapeHtml(o.text)}</span>
+                <span class="match-score" style="color:#06ffa5;">+1 W</span>
+                <button class="btn btn-small btn-danger" onclick="removeRomanticObs(${o.id})" title="Remove">✕</button>
+            </div>`;
+    }).join('');
 }

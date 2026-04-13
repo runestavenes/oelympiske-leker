@@ -1,0 +1,71 @@
+{
+	"inputs": [
+		{
+			"type": "promptString",
+			"id": "VAULT_PATH",
+			"description": "Path to your Obsidian vault directory (filesystem mode)",
+			"password": false
+		},
+		{
+			"type": "promptString",
+			"id": "COUCHDB_URL",
+			"description": "CouchDB server URL (CouchDB mode)",
+			"password": false
+		},
+		{
+			"type": "promptString",
+			"id": "COUCHDB_USER",
+			"description": "CouchDB username",
+			"password": false
+		},
+		{
+			"type": "promptString",
+			"id": "COUCHDB_PASSWORD",
+			"description": "CouchDB password (required in CouchDB mode)",
+			"password": true
+		},
+		{
+			"type": "promptString",
+			"id": "COUCHDB_DATABASE",
+			"description": "CouchDB database name",
+			"password": false
+		},
+		{
+			"type": "promptString",
+			"id": "COUCHDB_PASSPHRASE",
+			"description": "LiveSync E2E encryption passphrase (must match plugin setting)",
+			"password": true
+		},
+		{
+			"type": "promptString",
+			"id": "COUCHDB_OBFUSCATE_PROPERTIES",
+			"description": "Set to 'true' if 'Obfuscate Properties' is enabled in LiveSync (obfuscates file paths, sizes, dates)",
+			"password": false
+		},
+		{
+			"type": "promptString",
+			"id": "VAULT_NAME",
+			"description": "Vault name for deep links and index storage",
+			"password": false
+		},
+		{
+			"type": "promptString",
+			"id": "MCP_AUTH_TOKEN",
+			"description": "Password for OAuth authentication",
+			"password": true
+		},
+		{
+			"type": "promptString",
+			"id": "BASE_URL",
+			"description": "Public URL for OAuth callbacks (required when using a tunnel)",
+			"password": false
+		},
+		{
+			"type": "promptString",
+			"id": "PORT",
+			"description": "HTTP port",
+			"password": false
+		}
+	],
+	"servers": {}
+}
