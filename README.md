@@ -1,5 +1,5 @@
 # 🏅 Ølympiske Leker
-### Det ultimate turneringssystemet for beerlympics 💕
+### Det ultimate turneringssystemet 💕
 
 Et komplett system for å holde styr på konkurranser, seire, romantiske øyeblikk og drama. Bygget med ren HTML, CSS og vanilla JavaScript—ingen rammeverk, bare ren kjærlighet.
 
