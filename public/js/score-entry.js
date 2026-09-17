@@ -9,12 +9,13 @@ let currentActivity = null;
 let winloseWinner = null; // 'a' or 'b'
 let overlayTimer = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await initData();
     renderMatchList();
     initUndo();
     initRomanticView();
 
-    // Listen for cross-tab data changes (e.g. admin adds schedule)
+    // Listen for server data changes (e.g. admin adds schedule)
     onDataChange(() => {
         // Only refresh the list if no form is currently open
         if (currentMatchId === null) {
@@ -24,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const romanticView = document.getElementById('romantic-view');
         if (romanticView && !romanticView.classList.contains('hidden')) {
             renderRomantic();
+            populateRomanticDropdown();
         }
     });
 });
@@ -37,8 +39,8 @@ function renderMatchList() {
     const scheduledMatches = schedule.filter(m => m.round > 0 && !m.preTournament);
     const pending = getPendingMatches(scheduledMatches);
 
-    // Update undo bar visibility
-    const lastAction = getLastAction();
+    // Update undo bar visibility (only this device's own last submit)
+    const lastAction = getMyLastAction();
     const undoBar = document.getElementById('undo-bar');
     if (lastAction) {
         undoBar.classList.remove('hidden');
@@ -197,34 +199,23 @@ function cancelConfirm() {
     document.getElementById('submit-bar').style.display = '';
 }
 
-function confirmSubmit() {
+async function confirmSubmit() {
     const schedule = getSchedule();
     const match = schedule.find(m => m.matchId === currentMatchId);
     if (!match) return;
 
-    // Save undo state before changing
-    setLastAction({
-        type: 'score_submit',
-        matchId: match.matchId,
-        previous: {
-            status: match.status,
-            scoreA: match.scoreA,
-            scoreB: match.scoreB
-        }
-    });
-
-    // Update the match
-    match.status = 'finished';
-    match.scoreA = currentScoreA;
-    match.scoreB = currentScoreB;
-    match.timestamp = Date.now();
-    setSchedule(schedule);
+    try {
+        await apiSubmitScore(match.matchId, currentScoreA, currentScoreB);
+    } catch (err) {
+        return; // error toast already shown; keep form open for retry
+    }
 
     // Show "next game" overlay
     showNextOverlay(match);
 
     // Close form and refresh list
     document.getElementById('score-form').classList.add('hidden');
+    currentMatchId = null;
     renderMatchList();
 }
 
@@ -276,26 +267,19 @@ function initUndo() {
     document.getElementById('undo-btn').addEventListener('click', undoLastScore);
 }
 
-function undoLastScore() {
-    const lastAction = getLastAction();
+async function undoLastScore() {
+    const lastAction = getMyLastAction();
     if (!lastAction || lastAction.type !== 'score_submit') {
         showToast('Nothing to undo', 'error');
         return;
     }
 
-    const schedule = getSchedule();
-    const match = schedule.find(m => m.matchId === lastAction.matchId);
-    if (!match) {
-        showToast('Match not found', 'error');
-        return;
+    try {
+        await apiUndoMyScore();
+    } catch (err) {
+        renderMatchList();
+        return; // error toast already shown
     }
-
-    // Revert
-    match.status = lastAction.previous.status;
-    match.scoreA = lastAction.previous.scoreA;
-    match.scoreB = lastAction.previous.scoreB;
-    setSchedule(schedule);
-    clearLastAction();
 
     showToast('Score reverted ✓');
     renderMatchList();
@@ -337,7 +321,7 @@ function switchView(view) {
         toggleRomantic.classList.remove('active');
         undoBar.classList.remove('hidden');
         // Update undo bar visibility based on last action
-        const lastAction = getLastAction();
+        const lastAction = getMyLastAction();
         if (!lastAction) {
             undoBar.classList.add('hidden');
         }
@@ -375,7 +359,7 @@ function populateRomanticDropdown() {
         teams.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
 }
 
-function addRomanticObs() {
+async function addRomanticObs() {
     const textInput = document.getElementById('romantic-text-input');
     const teamSelect = document.getElementById('romantic-team-select');
     
@@ -393,10 +377,11 @@ function addRomanticObs() {
         return;
     }
 
-    const obs = getRomanticObs();
-    const id = obs.length > 0 ? Math.max(...obs.map(o => o.id)) + 1 : 1;
-    obs.push({ id, teamId, text, timestamp: Date.now() });
-    setRomanticObs(obs);
+    try {
+        await apiAddRomanticObs(teamId, text);
+    } catch (err) {
+        return; // error toast already shown
+    }
     
     textInput.value = '';
     teamSelect.selectedIndex = 0;
@@ -404,11 +389,14 @@ function addRomanticObs() {
     showToast('Romantisk observasjon added (+1 win) ✓');
 }
 
-function removeRomanticObs(id) {
-    if (!confirm('Remove this observation?')) return;
+async function removeRomanticObs(id) {
+    if (!await uiConfirm('Remove this observation?')) return;
     
-    const obs = getRomanticObs().filter(o => o.id !== id);
-    setRomanticObs(obs);
+    try {
+        await apiRemoveRomanticObs(id);
+    } catch (err) {
+        return;
+    }
     renderRomantic();
     showToast('Observation removed ✓');
 }

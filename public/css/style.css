@@ -1004,4 +1004,225 @@ h1, h2, h3 {
     .match-card-teams {
         font-size: 1rem;
     }
+
+    /* Admin on phones */
+    .page-header {
+        flex-direction: column;
+        gap: 0.6rem;
+        padding: 0.8rem 1rem;
+        text-align: center;
+    }
+
+    .tab-bar {
+        flex-wrap: wrap;
+    }
+
+    .tab-btn {
+        flex: 1 1 auto;
+        font-size: 0.85rem;
+        padding: 0.5rem 0.7rem;
+    }
+
+    .activity-fields {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .form-row {
+        flex-wrap: wrap;
+    }
+
+    .form-row input[type="text"],
+    .form-row select {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    .match-row {
+        flex-wrap: wrap;
+        gap: 0.3rem;
+    }
+}
+
+/* ── Gate overlay (event PIN / admin code) ─────────────────── */
+
+.gate-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    padding: 1rem;
+}
+
+.gate-box {
+    width: 100%;
+    max-width: 380px;
+    padding: 2rem;
+    background: rgba(0, 0, 0, 0.35);
+    border: 2px solid #ffd166;
+    border-radius: 1rem;
+    text-align: center;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.gate-box h2 {
+    color: #ffd166;
+    font-size: 1.8rem;
+    margin-bottom: 0.6rem;
+}
+
+.gate-box p {
+    color: #a8b2d1;
+    margin-bottom: 1.2rem;
+}
+
+.gate-box input {
+    width: 100%;
+    padding: 0.9rem 1rem;
+    margin-bottom: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.6rem;
+    background: rgba(0, 0, 0, 0.3);
+    color: #e8e8f0;
+    font-size: 1.3rem;
+    text-align: center;
+    letter-spacing: 0.2em;
+}
+
+.gate-box input:focus {
+    outline: none;
+    border-color: #ffd166;
+}
+
+.gate-box .btn {
+    width: 100%;
+}
+
+/* ── Connection banner ─────────────────────────────────────── */
+
+.conn-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1100;
+    padding: 0.5rem 1rem;
+    background: #d7263d;
+    color: #fff;
+    font-weight: 700;
+    text-align: center;
+    font-size: 0.9rem;
+    animation: conn-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes conn-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.65; }
+}
+
+/* ── Modal dialogs (replaces prompt/confirm) ───────────────── */
+
+.ui-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 1rem;
+}
+
+.ui-modal-box {
+    width: 100%;
+    max-width: 420px;
+    padding: 1.6rem;
+    background: #24243e;
+    border: 2px solid #ffd166;
+    border-radius: 1rem;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.ui-modal-box p {
+    margin-bottom: 1.2rem;
+    font-size: 1.05rem;
+    color: #e8e8f0;
+}
+
+.ui-modal-box input {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    margin-bottom: 1.2rem;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.6rem;
+    background: rgba(0, 0, 0, 0.3);
+    color: #e8e8f0;
+    font-size: 1.1rem;
+}
+
+.ui-modal-box input:focus {
+    outline: none;
+    border-color: #ffd166;
+}
+
+.ui-modal-box .btn-group {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.ui-modal-box .btn {
+    flex: 1;
+}
+
+/* ── Dashboard fanfare ─────────────────────────────────────── */
+
+.fanfare {
+    position: fixed;
+    top: 18%;
+    left: 50%;
+    z-index: 900;
+    transform: translateX(-50%) scale(0.6);
+    max-width: 90vw;
+    padding: 1.2rem 2.4rem;
+    background: linear-gradient(135deg, #ff6b35, #d7263d);
+    border: 3px solid #ffd166;
+    border-radius: 1rem;
+    font-family: 'Bangers', cursive;
+    font-size: 2rem;
+    letter-spacing: 0.05em;
+    color: #fff;
+    text-align: center;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.fanfare.show {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+    animation: fanfare-pop 0.5s ease;
+}
+
+@keyframes fanfare-pop {
+    0% { transform: translateX(-50%) scale(0.6); }
+    60% { transform: translateX(-50%) scale(1.08); }
+    100% { transform: translateX(-50%) scale(1); }
+}
+
+/* ── Tournament list (admin) ───────────────────────────────── */
+
+.tournament-active {
+    border-color: #06ffa5;
+}
+
+.active-badge {
+    margin-left: 0.6rem;
+    color: #06ffa5;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
 }

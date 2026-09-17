@@ -26,6 +26,7 @@
             <button class="tab-btn" data-tab="pretournament">🎪 Pre-Tournament</button>
             <button class="tab-btn" data-tab="romantic">💕 Romantiske</button>
             <button class="tab-btn" data-tab="schedule">📋 Schedule</button>
+            <button class="tab-btn" data-tab="tournaments">🏆 Tournaments</button>
             <button class="tab-btn" data-tab="data">💾 Data</button>
         </div>
 
@@ -101,9 +102,21 @@
             <div id="schedule-list"></div>
         </section>
 
-        <!-- ── Data Tab ───────────────────────────────── -->
+        <!-- ── Tournaments Tab ────────────────────── -->
+        <section id="tab-tournaments" class="tab-content">
+            <h2>Tournaments</h2>
+            <p class="hint">One tournament is <strong>active</strong> at a time — all phones and the dashboard show the active one. Create a new empty tournament for a new event, or reopen an old one.</p>
+            <div class="form-row">
+                <input type="text" id="new-tournament-name" placeholder="New tournament name…" maxlength="50">
+                <button id="create-tournament-btn" class="btn btn-primary">+ Create &amp; Open</button>
+            </div>
+            <div id="tournament-list" class="card-list"></div>
+        </section>
+
+        <!-- ── Data Tab ───────────────────────────── -->
         <section id="tab-data" class="tab-content">
             <h2>Data Management</h2>
+            <p class="hint">Export/import applies to the <strong>active</strong> tournament. Reset clears all data in the active tournament.</p>
             <div class="btn-group">
                 <button id="export-btn" class="btn btn-primary">📥 Export JSON</button>
                 <button id="import-btn" class="btn btn-secondary">📤 Import JSON</button>
@@ -114,6 +127,7 @@
     </main>
 
     <script src="js/data.js"></script>
+    <script src="js/ui.js"></script>
     <script src="js/schedule.js"></script>
     <script src="js/scoring.js"></script>
     <script src="js/admin.js"></script>

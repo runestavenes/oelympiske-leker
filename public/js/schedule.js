@@ -149,3 +149,8 @@ function validateSchedule(schedule, teams, activities) {
 
     return stats;
 }
+
+// Allow reuse from the Node.js server
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { generateSchedule, validateSchedule };
+}

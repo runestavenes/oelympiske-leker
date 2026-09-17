@@ -2,7 +2,8 @@
    admin.js — Admin panel logic (v2)
    ============================================================ */
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await initData({ admin: true });
     initTabs();
     renderTeams();
     renderActivities();
@@ -14,6 +15,20 @@ document.addEventListener('DOMContentLoaded', () => {
     initAddActivity();
     initPreTournament();
     initRomantic();
+    initScheduleButton();
+    initTournaments();
+
+    // Re-render read views when other devices change data
+    // (activities tab is skipped: it holds unsaved form edits)
+    onDataChange(() => {
+        renderTeams();
+        renderSchedule();
+        renderPreTournament();
+        renderRomantic();
+        populatePreTournamentDropdowns();
+        populateRomanticDropdown();
+        renderTournaments();
+    });
 });
 
 // ── Tab switching ─────────────────────────────────────────────
@@ -64,12 +79,12 @@ function removeTeam(id) {
     populateRomanticDropdown();
 }
 
-function renameTeam(id) {
+async function renameTeam(id) {
     const teams = getTeams();
     const team = teams.find(t => t.id === id);
     if (!team) return;
 
-    const newName = prompt('New name for "' + team.name + '":', team.name);
+    const newName = await uiPrompt('New name for "' + team.name + '":', team.name);
     if (newName && newName.trim()) {
         team.name = newName.trim();
         setTeams(teams);
@@ -171,8 +186,8 @@ function saveActivities() {
 }
 
 function initAddActivity() {
-    document.getElementById('add-activity-btn').addEventListener('click', () => {
-        const name = prompt('New activity name:');
+    document.getElementById('add-activity-btn').addEventListener('click', async () => {
+        const name = await uiPrompt('New activity name:');
         if (!name || !name.trim()) return;
 
         const activities = getActivities();
@@ -197,10 +212,10 @@ function initAddActivity() {
     });
 }
 
-function removeActivity(index) {
+async function removeActivity(index) {
     const activities = getActivities();
     const name = activities[index] ? activities[index].name : '';
-    if (!confirm('Remove activity "' + name + '"?')) return;
+    if (!await uiConfirm('Remove activity "' + name + '"?')) return;
     activities.splice(index, 1);
     setActivities(activities);
     renderActivities();
@@ -263,7 +278,7 @@ function removePreScore(id) {
     showToast('Score removed ✓');
 }
 
-function editPreScore(id) {
+async function editPreScore(id) {
     const preScores = getPreScores();
     const entry = preScores.find(s => s.id === id);
     if (!entry) return;
@@ -272,9 +287,9 @@ function editPreScore(id) {
     const act = getActivityById(entry.activityId);
     const actName = act ? act.name : entry.activityId;
 
-    const newResult = prompt(
-        teamName + ' — ' + actName + '\nCurrent: ' + entry.result +
-        '\nEnter new result (win, draw, lose):',
+    const newResult = await uiPrompt(
+        teamName + ' — ' + actName + ' (current: ' + entry.result +
+        ') — enter new result: win, draw or lose',
         entry.result
     );
     if (newResult === null) return;
@@ -349,7 +364,7 @@ function populateRomanticDropdown() {
         teams.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
 }
 
-function addRomanticObs() {
+async function addRomanticObs() {
     const text = document.getElementById('romantic-text-input').value.trim();
     const teamId = parseInt(document.getElementById('romantic-team-select').value, 10);
 
@@ -362,18 +377,22 @@ function addRomanticObs() {
         return;
     }
 
-    const obs = getRomanticObs();
-    const id = obs.length > 0 ? Math.max(...obs.map(o => o.id)) + 1 : 1;
-    obs.push({ id, teamId, text, timestamp: Date.now() });
-    setRomanticObs(obs);
+    try {
+        await apiAddRomanticObs(teamId, text);
+    } catch (err) {
+        return;
+    }
     document.getElementById('romantic-text-input').value = '';
     renderRomantic();
     showToast('Romantisk observasjon added (+1 win) ✓');
 }
 
-function removeRomanticObs(id) {
-    const obs = getRomanticObs().filter(o => o.id !== id);
-    setRomanticObs(obs);
+async function removeRomanticObs(id) {
+    try {
+        await apiRemoveRomanticObs(id);
+    } catch (err) {
+        return;
+    }
     renderRomantic();
     showToast('Observation removed ✓');
 }
@@ -401,34 +420,31 @@ function renderRomantic() {
 
 // ── Schedule ──────────────────────────────────────────────────
 
-document.getElementById('generate-schedule-btn').addEventListener('click', () => {
-    const teams = getTeams();
-    const scheduledActivities = getScheduledActivities();
+function initScheduleButton() {
+    document.getElementById('generate-schedule-btn').addEventListener('click', async () => {
+        const teams = getTeams();
+        const scheduledActivities = getScheduledActivities();
 
-    if (teams.length < 2) {
-        showToast('Add at least 2 teams first!', 'error');
-        return;
-    }
-    if (scheduledActivities.length === 0) {
-        showToast('No activities marked "In Schedule"!', 'error');
-        return;
-    }
+        if (teams.length < 2) {
+            showToast('Add at least 2 teams first!', 'error');
+            return;
+        }
+        if (scheduledActivities.length === 0) {
+            showToast('No activities marked "In Schedule"!', 'error');
+            return;
+        }
 
-    // Preserve pre-tournament matches
-    const existingSchedule = getSchedule();
-    const preMatches = existingSchedule.filter(m => m.round === 0 || m.preTournament);
-
-    const newMatches = generateSchedule(teams, scheduledActivities, parseInt(document.getElementById('schedule-rounds-input').value, 10) || 0);
-
-    // Renumber new matches to avoid ID conflicts
-    const maxPreId = preMatches.length > 0 ? Math.max(...preMatches.map(m => m.matchId)) : 0;
-    newMatches.forEach((m, i) => { m.matchId = maxPreId + 1 + i; });
-
-    const fullSchedule = [...preMatches, ...newMatches];
-    setSchedule(fullSchedule);
-    showToast(`Schedule generated: ${newMatches.length} matches in ${teams.length - 1} rounds ✓`);
-    renderSchedule();
-});
+        const rounds = parseInt(document.getElementById('schedule-rounds-input').value, 10) || 0;
+        try {
+            await apiGenerateSchedule(rounds);
+        } catch (err) {
+            return;
+        }
+        const newCount = getSchedule().filter(m => m.round > 0).length;
+        showToast(`Schedule generated: ${newCount} matches ✓`);
+        renderSchedule();
+    });
+}
 
 function renderSchedule() {
     const container = document.getElementById('schedule-list');
@@ -488,7 +504,7 @@ function renderSchedule() {
 
 // ── Edit submitted scores (N5) ────────────────────────────────
 
-function editMatchScore(matchId) {
+async function editMatchScore(matchId) {
     const schedule = getSchedule();
     const match = schedule.find(m => m.matchId === matchId);
     if (!match) return;
@@ -501,12 +517,10 @@ function editMatchScore(matchId) {
     const currentA = match.scoreA !== null && match.scoreA !== undefined ? match.scoreA : 0;
     const currentB = match.scoreB !== null && match.scoreB !== undefined ? match.scoreB : 0;
 
-    // Prompt for Team A score
-    const newScoreA = prompt(`Enter score for ${aName}:\n(Current: ${currentA})`, currentA);
+    const newScoreA = await uiPrompt(`Enter score for ${aName} (current: ${currentA}):`, currentA);
     if (newScoreA === null) return; // User cancelled
 
-    // Prompt for Team B score
-    const newScoreB = prompt(`Enter score for ${bName}:\n(Current: ${currentB})`, currentB);
+    const newScoreB = await uiPrompt(`Enter score for ${bName} (current: ${currentB}):`, currentB);
     if (newScoreB === null) return; // User cancelled
 
     const parsedA = parseInt(newScoreA, 10);
@@ -525,14 +539,11 @@ function editMatchScore(matchId) {
         }
     }
 
-    // Update match
-    match.status = 'finished';
-    match.scoreA = parsedA;
-    match.scoreB = parsedB;
-    if (!match.timestamp) {
-        match.timestamp = Date.now();
+    try {
+        await apiUpdateMatch(matchId, parsedA, parsedB);
+    } catch (err) {
+        return;
     }
-    setSchedule(schedule);
     renderSchedule();
     renderPreTournament();
     showToast('Score updated ✓');
@@ -540,7 +551,7 @@ function editMatchScore(matchId) {
 
 // ── Delete match ──────────────────────────────────────────────
 
-function deleteMatch(matchId) {
+async function deleteMatch(matchId) {
     const schedule = getSchedule();
     const match = schedule.find(m => m.matchId === matchId);
     if (!match) return;
@@ -550,14 +561,16 @@ function deleteMatch(matchId) {
     const act = getActivityById(match.activityId);
     const actName = act ? act.name : match.activityId;
 
-    const confirmMsg = `Delete this match?\n\n${actName}: ${aName} vs ${bName}` +
-        (match.status === 'finished' ? `\n(Score: ${match.scoreA} – ${match.scoreB})` : '');
+    const confirmMsg = `Delete this match? ${actName}: ${aName} vs ${bName}` +
+        (match.status === 'finished' ? ` (score: ${match.scoreA} – ${match.scoreB})` : '');
 
-    if (!confirm(confirmMsg)) return;
+    if (!await uiConfirm(confirmMsg)) return;
 
-    // Remove the match from schedule
-    const updatedSchedule = schedule.filter(m => m.matchId !== matchId);
-    setSchedule(updatedSchedule);
+    try {
+        await apiDeleteMatch(matchId);
+    } catch (err) {
+        return;
+    }
     renderSchedule();
     showToast('Match deleted ✓');
 }
@@ -565,8 +578,14 @@ function deleteMatch(matchId) {
 // ── Data management ───────────────────────────────────────────
 
 function initDataButtons() {
-    document.getElementById('export-btn').addEventListener('click', () => {
-        const json = exportAllData();
+    document.getElementById('export-btn').addEventListener('click', async () => {
+        let json;
+        try {
+            json = await exportAllData();
+        } catch (err) {
+            showToast('Export failed: ' + err.message, 'error');
+            return;
+        }
         const blob = new Blob([json], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -585,9 +604,9 @@ function initDataButtons() {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (ev) => {
+        reader.onload = async (ev) => {
             try {
-                importAllData(ev.target.result);
+                await importAllData(ev.target.result);
                 showToast('Data imported ✓');
                 renderTeams();
                 renderActivities();
@@ -604,24 +623,110 @@ function initDataButtons() {
         e.target.value = '';
     });
 
-    document.getElementById('reset-btn').addEventListener('click', () => {
-        if (confirm('⚠️ This will delete ALL data (teams, activities, schedule, scores). Are you sure?')) {
-            localStorage.removeItem(STORAGE_KEYS.TEAMS);
-            localStorage.removeItem(STORAGE_KEYS.ACTIVITIES);
-            localStorage.removeItem(STORAGE_KEYS.SCHEDULE);
-            localStorage.removeItem(STORAGE_KEYS.LAST_ACTION);
-            localStorage.removeItem(STORAGE_KEYS.PRE_SCORES);
-            localStorage.removeItem(STORAGE_KEYS.ROMANTIC_OBS);
-            showToast('All data reset ✓');
-            renderTeams();
-            renderActivities();
-            renderSchedule();
-            renderPreTournament();
-            renderRomantic();
-            populatePreTournamentDropdowns();
-            populateRomanticDropdown();
+    document.getElementById('reset-btn').addEventListener('click', async () => {
+        if (!await uiConfirm('⚠️ This will delete ALL data in the active tournament (teams, activities, schedule, scores). Are you sure?')) return;
+        try {
+            await apiReset();
+        } catch (err) {
+            return;
         }
+        showToast('All data reset ✓');
+        renderTeams();
+        renderActivities();
+        renderSchedule();
+        renderPreTournament();
+        renderRomantic();
+        populatePreTournamentDropdowns();
+        populateRomanticDropdown();
     });
+}
+
+// ── Tournaments ───────────────────────────────────
+
+let _tournamentIndex = null;
+
+function initTournaments() {
+    document.getElementById('create-tournament-btn').addEventListener('click', async () => {
+        const input = document.getElementById('new-tournament-name');
+        const name = input.value.trim();
+        if (!name) {
+            showToast('Enter a tournament name!', 'error');
+            return;
+        }
+        try {
+            const result = await apiCreateTournament(name);
+            await apiActivateTournament(result.id);
+        } catch (err) {
+            return;
+        }
+        input.value = '';
+        showToast('Tournament created and opened ✓');
+        renderAllAdmin();
+    });
+    renderTournaments();
+}
+
+async function renderTournaments() {
+    const container = document.getElementById('tournament-list');
+    if (!container) return;
+    try {
+        _tournamentIndex = await apiListTournaments();
+    } catch (err) {
+        container.innerHTML = '<p class="hint">Could not load tournaments.</p>';
+        return;
+    }
+
+    const { activeId, tournaments } = _tournamentIndex;
+    container.innerHTML = tournaments.map(t => {
+        const isActive = t.id === activeId;
+        const created = t.createdAt ? new Date(t.createdAt).toLocaleDateString() : '';
+        return `
+            <div class="card team-card ${isActive ? 'tournament-active' : ''}">
+                <span class="team-name">${escapeHtml(t.name)}
+                    <small style="color:#a8b2d1;font-weight:400;"> · ${created}</small>
+                    ${isActive ? '<span class="active-badge">● ACTIVE</span>' : ''}
+                </span>
+                <div class="card-actions">
+                    ${isActive ? '' : `<button class="btn btn-small btn-primary" onclick="openTournament('${t.id}')">Open</button>`}
+                    ${isActive ? '' : `<button class="btn btn-small btn-danger" onclick="deleteTournament('${t.id}')">✕</button>`}
+                </div>
+            </div>`;
+    }).join('');
+}
+
+async function openTournament(id) {
+    if (!await uiConfirm('Open this tournament? All phones and the dashboard will switch to it.')) return;
+    try {
+        await apiActivateTournament(id);
+    } catch (err) {
+        return;
+    }
+    showToast('Tournament opened ✓');
+    renderAllAdmin();
+}
+
+async function deleteTournament(id) {
+    const entry = _tournamentIndex && _tournamentIndex.tournaments.find(t => t.id === id);
+    const name = entry ? entry.name : id;
+    if (!await uiConfirm(`⚠️ Permanently delete tournament "${name}" and all its data?`)) return;
+    try {
+        await apiDeleteTournament(id);
+    } catch (err) {
+        return;
+    }
+    showToast('Tournament deleted ✓');
+    renderTournaments();
+}
+
+function renderAllAdmin() {
+    renderTeams();
+    renderActivities();
+    renderSchedule();
+    renderPreTournament();
+    renderRomantic();
+    populatePreTournamentDropdowns();
+    populateRomanticDropdown();
+    renderTournaments();
 }
 
 // ── Utilities ─────────────────────────────────────────────────

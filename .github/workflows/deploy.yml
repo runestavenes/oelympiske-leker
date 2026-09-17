@@ -1,0 +1,50 @@
+# Deploys to Azure App Service on push to main.
+#
+# One-time setup:
+# 1. Create the Azure resources (see infra/ for Terraform, or create manually):
+#    App Service Plan (Linux, B1) + Web App (Node 20), plus a Storage account.
+# 2. Create a Microsoft Entra app registration with federated credentials for
+#    this GitHub repo (subject: repo:<owner>/<repo>:ref:refs/heads/main) and
+#    give it the "Website Contributor" role on the Web App.
+# 3. Add these GitHub repository secrets:
+#    AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, AZURE_WEBAPP_NAME
+# 4. On the Web App, set app settings:
+#    AZURE_STORAGE_CONNECTION_STRING, EVENT_PIN, ADMIN_CODE,
+#    SCM_DO_BUILD_DURING_DEPLOYMENT=true
+
+name: Deploy to Azure App Service
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies (sanity check)
+        run: npm ci || npm install
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          package: .

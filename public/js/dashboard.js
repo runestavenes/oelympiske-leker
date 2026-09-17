@@ -2,10 +2,65 @@
    dashboard.js — Dashboard rendering + live updates
    ============================================================ */
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await initData();
+    _rememberResults();
     renderAll();
-    onDataChange(() => renderAll());
+    onDataChange(() => {
+        checkFanfare();
+        renderAll();
+    });
 });
+
+// ── Result fanfare ────────────────────────────────────────────
+
+let _seenMatchIds = new Set();
+let _seenObsIds = new Set();
+let _fanfareTimer = null;
+
+function _rememberResults() {
+    _seenMatchIds = new Set(getSchedule().filter(m => m.status === 'finished').map(m => m.matchId));
+    _seenObsIds = new Set(getRomanticObs().map(o => o.id));
+}
+
+function checkFanfare() {
+    const newMatches = getSchedule().filter(m => m.status === 'finished' && !_seenMatchIds.has(m.matchId));
+    const newObs = getRomanticObs().filter(o => !_seenObsIds.has(o.id));
+    _rememberResults();
+
+    let text = null;
+    if (newMatches.length > 0) {
+        const m = newMatches[newMatches.length - 1];
+        const act = getActivityById(m.activityId);
+        const aName = getTeamName(m.teamA);
+        const bName = getTeamName(m.teamB);
+        const emoji = m.scoreA === m.scoreB ? '🤝' : '🏆';
+        const headline = m.scoreA > m.scoreB ? `${aName} beats ${bName}!`
+            : m.scoreB > m.scoreA ? `${bName} beats ${aName}!`
+            : `${aName} and ${bName} draw!`;
+        text = `${emoji} ${act ? act.name : m.activityId}: ${headline}  ${m.scoreA} – ${m.scoreB}`;
+    } else if (newObs.length > 0) {
+        const o = newObs[newObs.length - 1];
+        text = `💕 Romantisk observasjon: ${getTeamName(o.teamId)} +1 win!`;
+    }
+    if (text) showFanfare(text);
+}
+
+function showFanfare(text) {
+    let el = document.getElementById('fanfare');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'fanfare';
+        el.className = 'fanfare';
+        document.body.appendChild(el);
+    }
+    el.textContent = text;
+    el.classList.remove('show');
+    void el.offsetWidth; // restart CSS animation
+    el.classList.add('show');
+    if (_fanfareTimer) clearTimeout(_fanfareTimer);
+    _fanfareTimer = setTimeout(() => el.classList.remove('show'), 6000);
+}
 
 function renderAll() {
     renderProgress();
