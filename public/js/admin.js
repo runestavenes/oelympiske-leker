@@ -444,6 +444,23 @@ function initScheduleButton() {
         showToast(`Schedule generated: ${newCount} matches ✓`);
         renderSchedule();
     });
+
+    document.getElementById('clear-pending-btn').addEventListener('click', async () => {
+        const pending = getSchedule().filter(m =>
+            m.round > 0 && !m.preTournament && m.status !== 'finished');
+        if (pending.length === 0) {
+            showToast('No pending matches to remove.', 'error');
+            return;
+        }
+        if (!await uiConfirm(`Remove all ${pending.length} pending matches from the schedule? Finished matches are kept.`)) return;
+        try {
+            await apiClearPendingMatches();
+        } catch (err) {
+            return;
+        }
+        renderSchedule();
+        showToast(`${pending.length} pending matches removed ✓`);
+    });
 }
 
 function renderSchedule() {

@@ -3,15 +3,17 @@
    ============================================================ */
 
 /**
- * Generate a full round-robin schedule.
+ * Generate a round-robin schedule.
  * Uses the "circle method": fix one team, rotate the rest.
  * Greedy balanced activity assignment distributes activities evenly.
  *
- * With 10 teams: 9 rounds × 5 matches = 45 total matches.
- * With 6 activities: each round uses 5 of 6 (one sits out, rotating).
+ * Rounds beyond a full round-robin cycle (teams − 1) repeat pairings.
+ * If no round count is given, defaults to max(full cycle, activity count)
+ * so every team can play every activity at least once.
  *
  * @param {Array} teams      — array of { id, name }
  * @param {Array} activities — array of activity configs
+ * @param {number} [maxRounds] — desired number of rounds (0/undefined = auto)
  * @returns {Array} schedule — array of match objects
  */
 function generateSchedule(teams, activities, maxRounds) {
@@ -30,7 +32,10 @@ function generateSchedule(teams, activities, maxRounds) {
 
     const totalPerRound = Math.floor((isOdd ? n + 1 : n) / 2);
     const fullRounds = isOdd ? n : n - 1;
-    const rounds = (maxRounds && maxRounds > 0 && maxRounds < fullRounds) ? maxRounds : fullRounds;
+    // Default: enough rounds for a full round-robin AND for every team
+    // to play every activity at least once.
+    const defaultRounds = Math.max(fullRounds, activities.length);
+    const rounds = (maxRounds && maxRounds > 0) ? maxRounds : defaultRounds;
 
     // Phase 1: Generate all round pairings
     const allRoundPairs = [];
@@ -75,6 +80,10 @@ function generateSchedule(teams, activities, maxRounds) {
         // weighted count so far.  Lower-weight activities accumulate
         // a penalty faster, so the greedy picker avoids them.
         for (let step = 0; step < pairs.length; step++) {
+            // More matches than activities this round: allow reuse
+            if (available.length === 0) {
+                activities.forEach((_, i) => available.push(i));
+            }
             let bestScore = Infinity;
             let bestPair  = -1;
             let bestAct   = -1;

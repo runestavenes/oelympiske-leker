@@ -212,6 +212,12 @@ function apiDeleteMatch(matchId) {
     return _apiMutate('DELETE', `/api/matches/${matchId}`);
 }
 
+function apiClearPendingMatches() {
+    if (_state) _state.schedule = _state.schedule.filter(m =>
+        m.round === 0 || m.preTournament || m.status === 'finished');
+    return _apiMutate('DELETE', '/api/schedule/pending');
+}
+
 function apiReset() {
     return _apiMutate('POST', '/api/reset');
 }

@@ -96,8 +96,9 @@
                     <input type="number" id="schedule-rounds-input" min="1" max="20" value="9" style="width:70px;margin-top:0.2rem;padding:0.4rem 0.6rem;border:1px solid rgba(255,255,255,0.15);border-radius:0.4rem;background:rgba(0,0,0,0.3);color:#e8e8f0;font-size:0.95rem;">
                 </label>
                 <button id="generate-schedule-btn" class="btn btn-primary">🔄 Generate Schedule</button>
+                <button id="clear-pending-btn" class="btn btn-danger">🗑 Remove Pending Matches</button>
             </div>
-            <p class="hint">Max rounds = teams − 1 (9 for 10 teams). Leave at max for a full round-robin.</p>
+            <p class="hint">Full round-robin = teams − 1 rounds. More rounds repeat pairings; fewer rounds give a partial schedule.</p>
             <p id="schedule-status" class="hint"></p>
             <div id="schedule-list"></div>
         </section>

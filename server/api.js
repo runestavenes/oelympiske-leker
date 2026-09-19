@@ -200,6 +200,14 @@ router.patch('/matches/:matchId', requireAdmin, wrap(async (req, res) => {
     res.json(stateResponse(id, state));
 }));
 
+router.delete('/schedule/pending', requireAdmin, wrap(async (req, res) => {
+    const { id, state } = await storage.mutateActive(state => {
+        state.schedule = state.schedule.filter(m =>
+            m.round === 0 || m.preTournament || m.status === 'finished');
+    });
+    res.json(stateResponse(id, state));
+}));
+
 router.delete('/matches/:matchId', requireAdmin, wrap(async (req, res) => {
     const matchId = parseInt(req.params.matchId, 10);
     const { id, state } = await storage.mutateActive(state => {
