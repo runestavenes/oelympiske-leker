@@ -20,16 +20,16 @@ const MAX_RETRIES = 5;
 
 function getDefaultActivities() {
     return [
-        { id: 'dart', name: 'Dart', scoreType: 'numeric', min: 0, max: 3, winPoints: 1, drawPoints: 1, lossPoints: 0, marginMultiplier: 0, fixedBonus: 0, inSchedule: true, weight: 1 },
-        { id: 'pushups', name: 'Push Ups', scoreType: 'winlose', min: 0, max: 1, winPoints: 4, drawPoints: 1, lossPoints: 0, marginMultiplier: 0, fixedBonus: 0, inSchedule: true, weight: 1 },
-        { id: 'sorting', name: 'Sorting', scoreType: 'winlose', min: 0, max: 1, winPoints: 4, drawPoints: 1, lossPoints: 0, marginMultiplier: 0, fixedBonus: 0, inSchedule: true, weight: 1 },
-        { id: 'beerpong', name: 'Beerpong', scoreType: 'numeric', min: 0, max: 4, winPoints: 1, drawPoints: 1, lossPoints: 0, marginMultiplier: 1, fixedBonus: 0, inSchedule: true, weight: 1 },
-        { id: 'flipcup', name: 'Flip Cup', scoreType: 'winlose', min: 0, max: 1, winPoints: 4, drawPoints: 1, lossPoints: 0, marginMultiplier: 0, fixedBonus: 0, inSchedule: true, weight: 1 },
-        { id: 'fyrstikkiq', name: 'Fyrstikk IQ', scoreType: 'numeric', min: 0, max: 3, winPoints: 1, drawPoints: 3, lossPoints: 0, marginMultiplier: 1, fixedBonus: 0, inSchedule: true, weight: 0.5 },
-        { id: 'boccia', name: 'Boccia', scoreType: 'numeric', min: 0, max: 10, winPoints: 3, drawPoints: 1, lossPoints: 0, marginMultiplier: 1, fixedBonus: 0, inSchedule: false },
-        { id: 'kubespillet', name: 'Kubespillet', scoreType: 'numeric', min: 0, max: 10, winPoints: 3, drawPoints: 1, lossPoints: 0, marginMultiplier: 1, fixedBonus: 0, inSchedule: false },
-        { id: 'kongekuben', name: 'Kongekuben', scoreType: 'numeric', min: 0, max: 10, winPoints: 3, drawPoints: 1, lossPoints: 0, marginMultiplier: 1, fixedBonus: 0, inSchedule: false },
-        { id: 'hestelop', name: 'Hesteløp', scoreType: 'numeric', min: 0, max: 10, winPoints: 3, drawPoints: 1, lossPoints: 0, marginMultiplier: 1, fixedBonus: 0, inSchedule: false }
+        { id: 'dart', name: 'Dart', scoreType: 'numeric', min: 0, max: 3, minWinScore: 3, winPoints: 1, drawPoints: 1, lossPoints: 0, marginMultiplier: 0, fixedBonus: 0, inSchedule: true, weight: 1 },
+        { id: 'pushups', name: 'Push Ups', scoreType: 'winlose', min: 0, max: 1, minWinScore: 0, winPoints: 4, drawPoints: 1, lossPoints: 0, marginMultiplier: 0, fixedBonus: 0, inSchedule: true, weight: 1 },
+        { id: 'sorting', name: 'Sorting', scoreType: 'winlose', min: 0, max: 1, minWinScore: 0, winPoints: 4, drawPoints: 1, lossPoints: 0, marginMultiplier: 0, fixedBonus: 0, inSchedule: true, weight: 1 },
+        { id: 'beerpong', name: 'Beerpong', scoreType: 'numeric', min: 0, max: 4, minWinScore: 4, winPoints: 1, drawPoints: 1, lossPoints: 0, marginMultiplier: 1, fixedBonus: 0, inSchedule: true, weight: 1 },
+        { id: 'flipcup', name: 'Flip Cup', scoreType: 'winlose', min: 0, max: 1, minWinScore: 0, winPoints: 4, drawPoints: 1, lossPoints: 0, marginMultiplier: 0, fixedBonus: 0, inSchedule: true, weight: 1 },
+        { id: 'fyrstikkiq', name: 'Fyrstikk IQ', scoreType: 'numeric', min: 0, max: 3, minWinScore: 0, winPoints: 1, drawPoints: 3, lossPoints: 0, marginMultiplier: 1, fixedBonus: 0, inSchedule: true, weight: 0.5 },
+        { id: 'boccia', name: 'Boccia', scoreType: 'numeric', min: 0, max: 10, minWinScore: 0, winPoints: 3, drawPoints: 1, lossPoints: 0, marginMultiplier: 1, fixedBonus: 0, inSchedule: false },
+        { id: 'kubespillet', name: 'Kubespillet', scoreType: 'numeric', min: 0, max: 10, minWinScore: 0, winPoints: 3, drawPoints: 1, lossPoints: 0, marginMultiplier: 1, fixedBonus: 0, inSchedule: false },
+        { id: 'kongekuben', name: 'Kongekuben', scoreType: 'numeric', min: 0, max: 10, minWinScore: 0, winPoints: 3, drawPoints: 1, lossPoints: 0, marginMultiplier: 1, fixedBonus: 0, inSchedule: false },
+        { id: 'hestelop', name: 'Hesteløp', scoreType: 'numeric', min: 0, max: 10, minWinScore: 0, winPoints: 3, drawPoints: 1, lossPoints: 0, marginMultiplier: 1, fixedBonus: 0, inSchedule: false }
     ];
 }
 
@@ -271,10 +271,30 @@ async function deleteTournament(id) {
     await driver.remove(tournamentKey(id));
 }
 
-async function renameActiveInIndex(name) {
+async function renameTournament(id, name) {
     await mutateIndex(index => {
-        const entry = index.tournaments.find(t => t.id === index.activeId);
-        if (entry) entry.name = name;
+        const entry = index.tournaments.find(t => t.id === id);
+        if (!entry) throw notFound('Tournament not found');
+        entry.name = name;
+    });
+    // Also update the tournament blob itself (version bump makes clients refresh)
+    await serialized(async () => {
+        const key = tournamentKey(id);
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            const found = await driver.read(key);
+            if (!found) return;
+            found.data.name = name;
+            found.data.version = (found.data.version || 0) + 1;
+            found.data.updatedAt = new Date().toISOString();
+            try {
+                await driver.write(key, found.data, found.etag);
+                return;
+            } catch (err) {
+                if (err.conflict && attempt < MAX_RETRIES - 1) continue;
+                throw err;
+            }
+        }
+        throw new Error('Storage conflict: retries exhausted');
     });
 }
 
@@ -288,7 +308,7 @@ module.exports = {
     createTournament,
     activateTournament,
     deleteTournament,
-    renameActiveInIndex,
+    renameTournament,
     emptyTournament,
     getDefaultActivities
 };

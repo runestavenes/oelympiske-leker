@@ -181,6 +181,13 @@ function requestConfirm() {
         return;
     }
 
+    // Validate minimum winning score (numeric activities)
+    if (currentActivity.scoreType !== 'winlose' && currentActivity.minWinScore > 0 &&
+        Math.max(currentScoreA, currentScoreB) < currentActivity.minWinScore) {
+        showToast(`Winning team must have at least ${currentActivity.minWinScore} points in ${currentActivity.name}!`, 'error');
+        return;
+    }
+
     const schedule = getSchedule();
     const match = schedule.find(m => m.matchId === currentMatchId);
     if (!match) return;

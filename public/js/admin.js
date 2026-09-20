@@ -134,6 +134,7 @@ function renderActivities() {
                 </label>
                 <label>Min <input type="number" data-field="min" value="${a.min}" min="0"></label>
                 <label>Max <input type="number" data-field="max" value="${a.max}" min="0"></label>
+                <label title="Numeric only: the winning team's score must be at least this (0 = off)">Min Win Score <input type="number" data-field="minWinScore" value="${a.minWinScore || 0}" min="0"></label>
                 <label>Win Pts <input type="number" data-field="winPoints" value="${a.winPoints}" min="0"></label>
                 <label>Draw Pts <input type="number" data-field="drawPoints" value="${a.drawPoints}" min="0"></label>
                 <label>Loss Pts <input type="number" data-field="lossPoints" value="${a.lossPoints}" min="0"></label>
@@ -198,6 +199,7 @@ function initAddActivity() {
             scoreType: 'numeric',
             min: 0,
             max: 10,
+            minWinScore: 0,
             winPoints: 3,
             drawPoints: 1,
             lossPoints: 0,
@@ -704,6 +706,7 @@ async function renderTournaments() {
                     ${isActive ? '<span class="active-badge">● ACTIVE</span>' : ''}
                 </span>
                 <div class="card-actions">
+                    <button class="btn btn-small btn-secondary" onclick="renameTournament('${t.id}')" title="Rename">✏️</button>
                     ${isActive ? '' : `<button class="btn btn-small btn-primary" onclick="openTournament('${t.id}')">Open</button>`}
                     ${isActive ? '' : `<button class="btn btn-small btn-danger" onclick="deleteTournament('${t.id}')">✕</button>`}
                 </div>
@@ -720,6 +723,19 @@ async function openTournament(id) {
     }
     showToast('Tournament opened ✓');
     renderAllAdmin();
+}
+
+async function renameTournament(id) {
+    const entry = _tournamentIndex && _tournamentIndex.tournaments.find(t => t.id === id);
+    const newName = await uiPrompt('New tournament name:', entry ? entry.name : '');
+    if (!newName || !newName.trim()) return;
+    try {
+        await apiRenameTournament(id, newName.trim());
+    } catch (err) {
+        return;
+    }
+    showToast('Tournament renamed ✓');
+    renderTournaments();
 }
 
 async function deleteTournament(id) {

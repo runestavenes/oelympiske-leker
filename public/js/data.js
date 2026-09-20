@@ -236,6 +236,10 @@ function apiActivateTournament(id) {
     return _apiMutate('POST', `/api/tournaments/${id}/activate`);
 }
 
+function apiRenameTournament(id, name) {
+    return _apiMutate('PATCH', `/api/tournaments/${id}`, { name });
+}
+
 function apiDeleteTournament(id) {
     return _apiMutate('DELETE', `/api/tournaments/${id}`);
 }

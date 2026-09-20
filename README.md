@@ -1,11 +1,13 @@
 # 🏅 Ølympiske Leker
 ### Det ultimate turneringssystemet 💕
 
-Et komplett system for å holde styr på konkurranser, seire, romantiske øyeblikk og drama. Bygget med ren HTML, CSS og vanilla JavaScript—ingen rammeverk, bare ren kjærlighet.
+**🌐 Live:** [https://oelympiske-leker-sdtui.azurewebsites.net](https://oelympiske-leker-sdtui.azurewebsites.net)
 
-Laget for eget bruk (med stor suksé), for par-tur.
+Et komplett system for å holde styr på konkurranser, seire, romantiske øyeblikk og drama. Bygget med ren HTML, CSS og vanilla JavaScript i front—ingen rammeverk, bare ren kjærlighet—pluss en liten Node/Express-server i bunn.
 
-![Dashboard Preview](images/Dashboard_Preview.png)
+Laget for eget bruk (med stor suksé), for par-tur. Nå live på Azure, så alle kan registrere poeng fra mobilen sin. 📱
+
+![Dashboard Preview](public/images/Dashboard_Preview.png)
 
 ## 🎯 Hva er dette?
 
@@ -17,7 +19,7 @@ Er du lei av å miste oversikten når dere holder ølympiske leker? dette system
 En enkel velkomstside med navigasjon til alle funksjonene.
 
 ### 📊 **dashboard.html** — Live Dashboard
-Her skjer det! Sanntids poengtavle, fremdriftssporing, pågående kamper, nylige resultater, per-aktivitet resultater og en rullende ticker. Alt oppdateres automatisk på tvers av faner via BroadcastChannel.
+Her skjer det! Sanntids poengtavle, fremdriftssporing, pågående kamper, nylige resultater, per-aktivitet resultater og en rullende ticker. Alt oppdateres automatisk—på tvers av alle mobiler og skjermer—uten refresh. Pluss fanfare-overlay når nye resultater tikker inn. 🎺
 
 ### ⚙️ **admin.html** — Administratorpanelet
 Her administrerer du hele turneringen gjennom flere under-faner:
@@ -26,9 +28,10 @@ Her administrerer du hele turneringen gjennom flere under-faner:
 - **🎪 Pre-Tournament** — Registrer resultater fra før turneringen starter (for seeding, eller felles aktiviteter)
 - **💕 Romantiske** — Hold oversikt over romantiske observasjoner (+1 seier hver)
 - **📋 Schedule** — Generer round-robin kampoppsett med smart aktivitetsfordeling
+- **�️ Tournaments** — Opprett, bytt mellom og slett turneringer (én aktiv om gangen)
 - **💾 Data** — Eksporter/importer turneringsdata som JSON
 
-![Admin Panel Preview](images/Admin_Preview.png)
+![Admin Panel Preview](public/images/Admin_Preview.png)
 
 ### 🏆 **score.html** — Poengregistrering & Romantikk
 En side med to ulike visninger som du kan bytte mellom:
@@ -51,9 +54,12 @@ Hver observasjon gir **+1 seier** (ingen poeng). Fordi kjærlighet alltid vinner
 ### Smart Kampoppsett
 Round-robin generator med greedy aktivitetsfordeling sikrer at hvert lag spiller hver aktivitet omtrent likt. Aktivitetsvekter kontrollerer frekvens (0.5 = halvparten så ofte, osv.).
 
-### Synkronisering Mellom Faner
-Redigerer du noe i admin, ser du oppdateringen på dashboardet øyeblikkelig. Ingen refresh nødvendig. Ren localStorage-magi med BroadcastChannel + storage events + polling fallback.
+### Synkronisering Mellom Enheter
+Redigerer du noe i admin, eller noen legger inn poeng fra mobilen sin, ser du oppdateringen på dashboardet i løpet av sekunder. Ingen refresh nødvendig. Alt går via serveren, og to lag som sender inn poeng samtidig kan aldri overskrive hverandre.
 Lowkey en godsend btw
+
+### PIN-beskyttelse 🔐
+Privat arrangement = felles PIN for deltakere + egen admin-kode. Skrives inn én gang per mobil, så husker den det.
 
 ### Nylige Resultater
 En samlet tidslinje som viser de 8 nyeste resultatene av ALLE typer—kamper, romantiske observasjoner, pre-tournament aktiviteter—alt kronologisk sortert.
@@ -62,37 +68,71 @@ En samlet tidslinje som viser de 8 nyeste resultatene av ALLE typer—kamper, ro
 
 - **HTML5** — Semantisk struktur
 - **CSS3** — Gradient bakgrunner, flexbox layouts, responsivt design
-- **Vanilla JS** — Ingen avhengigheter, bare ren JavaScript-kjærlighet
-- **localStorage** — Persistent datalagring
-- **BroadcastChannel** — Sanntidsoppdateringer på tvers av faner
+- **Vanilla JS** — Ingen rammeverk i frontend, bare ren JavaScript-kjærlighet
+- **Node.js + Express** — Liten server som serverer sidene og et JSON-API
+- **Azure App Service + Blob Storage** — Hosting og datalagring i skyen
+- **GitHub Actions** — Push til main = automatisk deploy
 
-- Planlegger selvfølgelig å oppgradere løsningen til noe som også kan nåes fra mobiler og på internett (famous last words)
+- ~~Planlegger selvfølgelig å oppgradere løsningen til noe som også kan nåes fra mobiler og på internett (famous last words)~~
+- Sa jeg "famous last words" om å få dette på nett? Vel. Det er på nett nå. 😎
 
-## 💾 Dataadministrasjon
+![Codebase Diagram](codebase_diagram.png)
 
-All data lagres i localStorage:
-- `ol_teams` — Lagliste
-- `ol_activities` — Spillkonfigurasjoner
-- `ol_schedule` — Kampoppsett med resultater
-- `ol_pre_scores` — Pre-tournament seeding
-- `ol_romantic_obs` — Romantiske observasjoner
-- `ol_last_action` — Angre-støtte
+## �️ How-to: Drift
+
+Alle kommandoer kjøres i terminalen. Logg inn først (husk riktig tenant):
+
+```powershell
+az login --tenant <tenant-id>
+```
+
+### Skalere ned/opp for "turneringssesong"
+
+App Service-planen koster penger så lenge den kjører på B1 — skaler ned til gratis F1 utenom sesong:
+
+```powershell
+# Ned (off-season, gratis — appen kjører fortsatt, men tregere og uten always_on)
+az appservice plan update -g rg-rune-sin-sandkasse -n plan-oelympiske-leker --sku F1
+
+# Opp (turneringssesong)
+az appservice plan update -g rg-rune-sin-sandkasse -n plan-oelympiske-leker --sku B1
+```
+
+### Stoppe og starte appen
+
+```powershell
+az webapp stop  -g rg-rune-sin-sandkasse -n oelympiske-leker-sdtui
+az webapp start -g rg-rune-sin-sandkasse -n oelympiske-leker-sdtui
+```
+
+Merk: å stoppe appen stopper ikke fakturering av B1-planen — skaler ned til F1 for det. Dataene ligger trygt i Blob Storage uansett.
+
+### Arkivere en aktiv turnering
+
+Turneringer slettes aldri automatisk — alle inaktive turneringer ligger arkivert i lista. Å "arkivere" = å gjøre en annen turnering aktiv:
+
+1. Gå til **admin.html → 🏆 Tournaments**
+2. (Valgfritt) Gi turneringen et beskrivende navn med ✏️-knappen, f.eks. "Haugabaret par-tur sept 2026"
+3. Skriv inn navn på neste turnering og trykk **+ Create & Open** — den nye blir aktiv, den gamle ligger igjen i lista med all data intakt
+
+### Bytte til / laste en arkivert turnering
+
+1. Gå til **admin.html → 🏆 Tournaments**
+2. Trykk **Open** på turneringen du vil hente fram — alle mobiler og dashboardet bytter til den i løpet av sekunder
+
+### Utvide kampoppsettet midt i turneringen
+
+Gå til **admin.html → 📋 Schedule**, sett økt antall runder og trykk **🔄 Generate Schedule**. Ferdigspilte kamper beholder poengene sine — forutsatt at lag og aktiviteter er uendret.
+
+## �💾 Dataadministrasjon
+
+All data lagres som JSON i Azure Blob Storage (én blob per turnering). Kjører du lokalt uten Azure, havner alt i `.data/`-mappa i stedet—null oppsett nødvendig.
 
 Eksporter alt som JSON for backup. Importer for å gjenopprette eller dele turneringer.
 
-## 🚀 Kom i Gang
-
-1. Åpne `index.html` i hvilken som helst moderne nettleser
-2. Gå til Admin → Teams for å legge til lagene dine
-3. Konfigurer Activities (eller bruk standardinnstillingene)
-4. Generer Schedule
-5. Bruk Score Entry til å registrere resultater
-6. Se dashboardet for å følge med på æren
-7. Ikke glem å legge til romantiske observasjoner 💕
-
 ## 📱 Mobilvennlig
 
-Fullstendig responsivt design. Tilrettelagt for å kunne gjøre løsningen tilgjengelig på deltakere sine mobiler i fremtiden.
+Fullstendig responsivt design. Deltakerne registrerer poeng rett fra mobilen—ingen app, bare nettleser og PIN.
 
 ## 🎉 Funksjoner i Detalj
 

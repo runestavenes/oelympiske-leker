@@ -1,5 +1,15 @@
 /* ============================================================
    schedule.js — Round-robin schedule generator (circle method)
+
+   ⚠️⚠️ WARNING — DETERMINISM IS LOAD-BEARING ⚠️⚠️
+   generateSchedule() must stay 100% deterministic: the same
+   teams, activities and weights must ALWAYS produce the same
+   pairings and activity assignments for the same round numbers.
+   The server relies on this to EXTEND a schedule mid-tournament
+   (regenerate with more rounds) while carrying finished results
+   over (see /schedule/generate in server/api.js). Introducing
+   randomness, reordering, or changing the circle/greedy logic
+   will silently break mid-tournament extension.
    ============================================================ */
 
 /**

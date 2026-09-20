@@ -67,6 +67,12 @@ router.post('/matches/:matchId/score', requirePlayer, wrap(async (req, res) => {
         if (act && (scoreA < act.min || scoreA > act.max || scoreB < act.min || scoreB > act.max)) {
             throw fail(400, `Scores must be between ${act.min} and ${act.max}`);
         }
+        // Enforce minimum winning score (e.g. Beerpong winner always has 4).
+        // Admin PATCH /matches/:id is exempt so odd results can be corrected.
+        if (act && act.scoreType === 'numeric' && act.minWinScore > 0 &&
+            Math.max(scoreA, scoreB) < act.minWinScore) {
+            throw fail(400, `Winning team must have at least ${act.minWinScore} points in ${act.name}`);
+        }
         if (deviceId) {
             state.lastActions = state.lastActions || {};
             state.lastActions[deviceId] = {
@@ -166,6 +172,15 @@ router.put('/pre-scores', requireAdmin, wrap(async (req, res) => {
 
 // ── Admin: schedule ───────────────────────────────────────────
 
+/* ⚠️⚠️ CRITICAL — MID-TOURNAMENT SCHEDULE EXTENSION ⚠️⚠️
+   Regenerating the schedule with more rounds MUST NOT reset scores of
+   already-finished matches. Because generateSchedule() is deterministic
+   (see warning in public/js/schedule.js), regenerating with the same
+   teams/activities/weights reproduces the earlier rounds identically, and
+   the carry-over below copies finished results onto the new schedule.
+   Finished matches that no longer fit the new schedule (e.g. teams or
+   activities changed) are NEVER discarded — they are appended as-is.
+   Do not change this behaviour without testing mid-tournament extension. */
 router.post('/schedule/generate', requireAdmin, wrap(async (req, res) => {
     const rounds = parseInt(req.body.rounds, 10) || 0;
     const { id, state } = await storage.mutateActive(state => {
@@ -174,11 +189,36 @@ router.post('/schedule/generate', requireAdmin, wrap(async (req, res) => {
         if (scheduledActivities.length === 0) throw fail(400, 'No activities marked "In Schedule"');
 
         const preMatches = state.schedule.filter(m => m.round === 0 || m.preTournament);
+        const finished = state.schedule.filter(m =>
+            !(m.round === 0 || m.preTournament) && m.status === 'finished');
         const newMatches = generateSchedule(state.teams, scheduledActivities, rounds);
+
+        // Carry finished results over onto the regenerated schedule
+        const leftovers = [];
+        for (const old of finished) {
+            const target = newMatches.find(m => m.status === 'pending' &&
+                m.round === old.round && m.activityId === old.activityId &&
+                ((m.teamA === old.teamA && m.teamB === old.teamB) ||
+                 (m.teamA === old.teamB && m.teamB === old.teamA)));
+            if (target) {
+                target.status = 'finished';
+                if (target.teamA === old.teamA) {
+                    target.scoreA = old.scoreA; target.scoreB = old.scoreB;
+                } else {
+                    target.scoreA = old.scoreB; target.scoreB = old.scoreA;
+                }
+                target.timestamp = old.timestamp;
+            } else {
+                leftovers.push(old); // no matching slot — keep the result anyway
+            }
+        }
+
         const maxPreId = preMatches.length > 0 ? Math.max(...preMatches.map(m => m.matchId)) : 0;
         newMatches.forEach((m, i) => { m.matchId = maxPreId + 1 + i; });
+        let nextId = maxPreId + newMatches.length + 1;
+        leftovers.forEach(m => { m.matchId = nextId++; });
 
-        state.schedule = [...preMatches, ...newMatches];
+        state.schedule = [...preMatches, ...newMatches, ...leftovers];
         state.lastActions = {};
     });
     res.json(stateResponse(id, state));
@@ -234,6 +274,13 @@ router.post('/tournaments/:id/activate', requireAdmin, wrap(async (req, res) => 
     await storage.activateTournament(req.params.id);
     const { id, state } = await storage.getActiveTournament();
     res.json(stateResponse(id, state));
+}));
+
+router.patch('/tournaments/:id', requireAdmin, wrap(async (req, res) => {
+    const name = (req.body.name || '').trim().slice(0, 50);
+    if (!name) throw fail(400, 'Name required');
+    await storage.renameTournament(req.params.id, name);
+    res.json({ index: await storage.getIndex() });
 }));
 
 router.delete('/tournaments/:id', requireAdmin, wrap(async (req, res) => {
