@@ -51,7 +51,7 @@ function calculateMatchPoints(match, activity) {
 
 /**
  * Build sorted leaderboard from all finished matches.
- * Sort: wins DESC, then totalPoints DESC.
+ * Sort: wins DESC, draws DESC, losses ASC, then totalPoints DESC.
  */
 function calculateLeaderboard(teams, schedule, activities) {
     const actMap = {};
@@ -118,11 +118,12 @@ function calculateLeaderboard(teams, schedule, activities) {
         }
     });
 
-    // Sort: (wins - losses) first, then points as tiebreaker
+    // Sort: most wins first, draws break ties, then fewest losses.
+    // Points only matter when W/D/L are all equal. Win% is display-only.
     return Object.values(stats).sort((a, b) => {
-        const netA = a.wins - a.losses;
-        const netB = b.wins - b.losses;
-        if (netB !== netA) return netB - netA;
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        if (b.draws !== a.draws) return b.draws - a.draws;
+        if (a.losses !== b.losses) return a.losses - b.losses;
         return b.totalPoints - a.totalPoints;
     });
 }

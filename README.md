@@ -48,7 +48,7 @@ Deretter når man som team har mottatt en lapp, legger man den inn på nettsiden
 ## 🎮 Kjernefunksjoner
 
 ### Sortering av Poengtavlen
-Lagene rangeres etter **(seire - tap)** først, deretter totale poeng som tiebreaker. Med andre ord—konsistent god prestasjon slår flashy poengfangster.
+Lagene rangeres etter **seire** først, deretter uavgjorte, så færrest tap — og totale poeng kun som siste tiebreaker. Win% er bare til pynt og påvirker ikke plasseringen.
 
 ### Romantiske Observasjoner
 Hver observasjon gir **+1 seier** (ingen poeng). Fordi kjærlighet alltid vinner, duuuuh.
