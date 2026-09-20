@@ -86,6 +86,8 @@ function selectTeam(teamId) {
     setMyTeamId(teamId);
     document.getElementById('team-picker').classList.add('hidden');
     showToast('Playing as ' + getTeamName(teamId) + ' ✓');
+    document.getElementById('played-games').removeAttribute('open'); // collapse for the new team
+    populateRomanticDropdown(true);
     renderScoreEntry();
 }
 
@@ -555,13 +557,19 @@ function initRomanticView() {
     }
 }
 
-function populateRomanticDropdown() {
+function populateRomanticDropdown(resetToMyTeam) {
     const teams = getTeams();
     const select = document.getElementById('romantic-team-select');
     if (!select) return;
-    
+
+    // Keep a manual selection across re-renders unless a reset is requested
+    const keep = resetToMyTeam ? null : parseInt(select.value, 10) || null;
     select.innerHTML = '<option value="">Select team…</option>' +
         teams.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+
+    // Default to own team (players register the note they received themselves)
+    const target = keep || getMyTeamId();
+    if (target && teams.some(t => t.id === target)) select.value = String(target);
 }
 
 async function addRomanticObs() {
@@ -589,7 +597,7 @@ async function addRomanticObs() {
     }
     
     textInput.value = '';
-    teamSelect.selectedIndex = 0;
+    populateRomanticDropdown(true); // back to own team for the next entry
     renderRomantic();
     showToast('Romantisk observasjon added (+1 win) ✓');
 }
