@@ -28,6 +28,17 @@ function getDeviceId() {
     return id;
 }
 
+// My team (chosen once per device on the score entry page)
+function getMyTeamId() {
+    const raw = localStorage.getItem('ol_team_id');
+    return raw === null ? null : parseInt(raw, 10);
+}
+
+function setMyTeamId(teamId) {
+    if (teamId === null) localStorage.removeItem('ol_team_id');
+    else localStorage.setItem('ol_team_id', String(teamId));
+}
+
 function _authHeaders() {
     const headers = {};
     const pin = _getPin();
@@ -189,6 +200,14 @@ function apiUndoMyScore() {
     return _apiMutate('POST', '/api/undo', { deviceId: getDeviceId() });
 }
 
+function apiRequestScoreChange(matchId, teamId, scoreA, scoreB) {
+    return _apiMutate('POST', `/api/matches/${matchId}/dispute`, { teamId, scoreA, scoreB });
+}
+
+function apiResolveScoreChange(matchId, teamId, accept) {
+    return _apiMutate('POST', `/api/matches/${matchId}/dispute/resolve`, { teamId, accept });
+}
+
 function apiAddRomanticObs(teamId, text) {
     return _apiMutate('POST', '/api/romantic', { teamId, text });
 }
@@ -214,7 +233,7 @@ function apiDeleteMatch(matchId) {
 
 function apiClearPendingMatches() {
     if (_state) _state.schedule = _state.schedule.filter(m =>
-        m.round === 0 || m.preTournament || m.status === 'finished');
+        m.round === 0 || m.preTournament || m.status === 'finished' || m.dispute);
     return _apiMutate('DELETE', '/api/schedule/pending');
 }
 

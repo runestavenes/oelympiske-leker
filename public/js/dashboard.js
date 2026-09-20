@@ -164,10 +164,12 @@ function renderActiveGames() {
         const act = getActivityById(m.activityId);
         const aName = getTeamName(m.teamA);
         const bName = getTeamName(m.teamB);
+        const disputed = !!m.dispute;
         return `
-            <div class="game-row game-pending">
+            <div class="game-row ${disputed ? 'game-dispute' : 'game-pending'}">
                 <span class="game-activity">${escapeHtml(act ? act.name : m.activityId)}</span>
                 <span class="game-teams">${escapeHtml(aName)} <span class="vs-small">vs</span> ${escapeHtml(bName)}</span>
+                ${disputed ? '<span class="game-dispute-badge">⚠️ score under review</span>' : ''}
                 <span class="game-round">R${m.round}</span>
             </div>`;
     }).join('');

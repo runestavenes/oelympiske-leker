@@ -139,10 +139,11 @@ function getWinRate(stat) {
 
 /**
  * Find a team's next pending match (earliest in schedule order).
+ * Matches awaiting a score-change decision are not playable.
  */
 function getNextMatch(teamId, schedule) {
     return schedule.find(m =>
-        m.status === 'pending' && (m.teamA === teamId || m.teamB === teamId)
+        m.status === 'pending' && !m.dispute && (m.teamA === teamId || m.teamB === teamId)
     );
 }
 

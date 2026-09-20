@@ -11,6 +11,7 @@
 <body>
     <header class="page-header">
         <h1 class="site-title">🏅 Enter Your Score</h1>
+        <button id="team-badge" class="team-badge" onclick="openTeamPicker()" title="Change team">Choose team ▾</button>
         <nav class="nav-links">
             <a href="index.html">Home</a>
             <a href="dashboard.html">Dashboard</a>
@@ -39,6 +40,15 @@
 
         <!-- Score Entry View (default) -->
         <div id="scores-view" class="view-section">
+            <!-- Incoming/outgoing score change requests -->
+            <div id="dispute-requests"></div>
+
+            <!-- Played games (request a score change) -->
+            <details id="played-games" class="played-games hidden">
+                <summary>📜 Played games — request score change</summary>
+                <div id="played-list"></div>
+            </details>
+
             <!-- Pending matches list -->
             <div id="match-list" class="match-list"></div>
         </div>
@@ -114,6 +124,16 @@
                     <button class="btn btn-primary btn-large" onclick="requestConfirm()">Submit Score</button>
                     <button class="btn btn-secondary btn-large" onclick="closeForm()">Cancel</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Team picker overlay -->
+        <div id="team-picker" class="team-picker-overlay hidden">
+            <div class="team-picker-content">
+                <button id="team-picker-close" class="team-picker-close hidden" onclick="closeTeamPicker()">✕</button>
+                <h2>🏷️ Select your team</h2>
+                <p class="hint">You only see your own matches. You can switch team here if you picked the wrong one.</p>
+                <div id="team-picker-list" class="team-picker-list"></div>
             </div>
         </div>
     </main>

@@ -87,6 +87,74 @@ router.post('/matches/:matchId/score', requirePlayer, wrap(async (req, res) => {
         match.scoreA = scoreA;
         match.scoreB = scoreB;
         match.timestamp = Date.now();
+        delete match.dispute; // direct submit overrides any pending change request
+    });
+    res.json(stateResponse(id, state));
+}));
+
+// ── Score change requests / disputes (players) ─────────────
+// A team proposes a new score for a finished match it played in.
+// The match is reset to pending (drops out of the leaderboard and
+// reappears under Active games) until the OTHER team accepts or
+// declines. Decline restores the original result.
+
+router.post('/matches/:matchId/dispute', requirePlayer, wrap(async (req, res) => {
+    const matchId = parseInt(req.params.matchId, 10);
+    const { teamId, scoreA, scoreB } = req.body;
+    if (!Number.isFinite(teamId)) throw fail(400, 'teamId required');
+    if (!Number.isFinite(scoreA) || !Number.isFinite(scoreB)) throw fail(400, 'Invalid scores');
+
+    const { id, state } = await storage.mutateActive(state => {
+        const match = state.schedule.find(m => m.matchId === matchId);
+        if (!match) throw fail(404, 'Match not found');
+        if (match.teamA !== teamId && match.teamB !== teamId) throw fail(403, 'Your team did not play this match');
+        if (match.status !== 'finished') throw fail(400, 'Match has no result to change');
+        if (match.dispute) throw fail(409, 'A change request is already pending for this match');
+        const act = state.activities.find(a => a.id === match.activityId);
+        if (act && (scoreA < act.min || scoreA > act.max || scoreB < act.min || scoreB > act.max)) {
+            throw fail(400, `Scores must be between ${act.min} and ${act.max}`);
+        }
+        if (act && act.scoreType === 'numeric' && act.minWinScore > 0 &&
+            Math.max(scoreA, scoreB) < act.minWinScore) {
+            throw fail(400, `Winning team must have at least ${act.minWinScore} points in ${act.name}`);
+        }
+        match.dispute = {
+            requestedBy: teamId,
+            proposedScoreA: scoreA,
+            proposedScoreB: scoreB,
+            original: { scoreA: match.scoreA, scoreB: match.scoreB, timestamp: match.timestamp },
+            requestedAt: Date.now()
+        };
+        match.status = 'pending';
+        match.scoreA = null;
+        match.scoreB = null;
+    });
+    res.json(stateResponse(id, state));
+}));
+
+router.post('/matches/:matchId/dispute/resolve', requirePlayer, wrap(async (req, res) => {
+    const matchId = parseInt(req.params.matchId, 10);
+    const { teamId, accept } = req.body;
+    if (!Number.isFinite(teamId)) throw fail(400, 'teamId required');
+
+    const { id, state } = await storage.mutateActive(state => {
+        const match = state.schedule.find(m => m.matchId === matchId);
+        if (!match) throw fail(404, 'Match not found');
+        if (!match.dispute) throw fail(404, 'No pending change request for this match');
+        if (match.teamA !== teamId && match.teamB !== teamId) throw fail(403, 'Your team did not play this match');
+        if (match.dispute.requestedBy === teamId) throw fail(403, 'The other team must accept or decline');
+
+        if (accept) {
+            match.scoreA = match.dispute.proposedScoreA;
+            match.scoreB = match.dispute.proposedScoreB;
+            match.timestamp = Date.now();
+        } else {
+            match.scoreA = match.dispute.original.scoreA;
+            match.scoreB = match.dispute.original.scoreB;
+            match.timestamp = match.dispute.original.timestamp;
+        }
+        match.status = 'finished';
+        delete match.dispute;
     });
     res.json(stateResponse(id, state));
 }));
@@ -189,25 +257,26 @@ router.post('/schedule/generate', requireAdmin, wrap(async (req, res) => {
         if (scheduledActivities.length === 0) throw fail(400, 'No activities marked "In Schedule"');
 
         const preMatches = state.schedule.filter(m => m.round === 0 || m.preTournament);
+        // Preserve finished results AND matches with a pending change request
+        // (disputes hold the original score — losing them would destroy data)
         const finished = state.schedule.filter(m =>
-            !(m.round === 0 || m.preTournament) && m.status === 'finished');
+            !(m.round === 0 || m.preTournament) && (m.status === 'finished' || m.dispute));
         const newMatches = generateSchedule(state.teams, scheduledActivities, rounds);
 
         // Carry finished results over onto the regenerated schedule
         const leftovers = [];
         for (const old of finished) {
-            const target = newMatches.find(m => m.status === 'pending' &&
+            const target = newMatches.find(m => m.status === 'pending' && !m.dispute &&
                 m.round === old.round && m.activityId === old.activityId &&
                 ((m.teamA === old.teamA && m.teamB === old.teamB) ||
                  (m.teamA === old.teamB && m.teamB === old.teamA)));
             if (target) {
-                target.status = 'finished';
-                if (target.teamA === old.teamA) {
-                    target.scoreA = old.scoreA; target.scoreB = old.scoreB;
-                } else {
-                    target.scoreA = old.scoreB; target.scoreB = old.scoreA;
-                }
+                const swapped = target.teamA !== old.teamA;
+                target.status = old.status;
+                target.scoreA = swapped ? old.scoreB : old.scoreA;
+                target.scoreB = swapped ? old.scoreA : old.scoreB;
                 target.timestamp = old.timestamp;
+                if (old.dispute) target.dispute = old.dispute;
             } else {
                 leftovers.push(old); // no matching slot — keep the result anyway
             }
@@ -236,6 +305,7 @@ router.patch('/matches/:matchId', requireAdmin, wrap(async (req, res) => {
         match.scoreA = scoreA;
         match.scoreB = scoreB;
         if (!match.timestamp) match.timestamp = Date.now();
+        delete match.dispute; // admin edit overrides any pending change request
     });
     res.json(stateResponse(id, state));
 }));
@@ -243,7 +313,7 @@ router.patch('/matches/:matchId', requireAdmin, wrap(async (req, res) => {
 router.delete('/schedule/pending', requireAdmin, wrap(async (req, res) => {
     const { id, state } = await storage.mutateActive(state => {
         state.schedule = state.schedule.filter(m =>
-            m.round === 0 || m.preTournament || m.status === 'finished');
+            m.round === 0 || m.preTournament || m.status === 'finished' || m.dispute);
     });
     res.json(stateResponse(id, state));
 }));

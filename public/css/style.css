@@ -516,6 +516,125 @@ h1, h2, h3 {
     text-align: center;
 }
 
+/* ── Team badge + picker (score entry) ─────────────────── */
+
+.team-badge {
+    border: 2px solid #ffd166;
+    background: rgba(255, 209, 102, 0.12);
+    color: #ffd166;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.team-badge:hover { background: rgba(255, 209, 102, 0.25); }
+
+.team-picker-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(15, 12, 41, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.team-picker-overlay.hidden { display: none; }
+
+.team-picker-content {
+    position: relative;
+    background: linear-gradient(135deg, #302b63, #24243e);
+    border: 3px solid #ffd166;
+    border-radius: 1.2rem;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 420px;
+    max-height: 85vh;
+    overflow-y: auto;
+    text-align: center;
+}
+
+.team-picker-content h2 { color: #ffd166; margin-bottom: 0.5rem; }
+
+.team-picker-close {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.8rem;
+    background: none;
+    border: none;
+    color: #a8b2d1;
+    font-size: 1.3rem;
+    cursor: pointer;
+}
+
+.team-picker-close.hidden { display: none; }
+
+.team-picker-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-top: 1rem;
+}
+
+.team-pick-btn { width: 100%; justify-content: center; }
+
+/* ── Score change requests (score entry) ────────────────── */
+
+.dispute-card {
+    max-width: 800px;
+    margin: 0 auto 1rem;
+    border: 3px solid #06d6a0;
+    background: linear-gradient(135deg, rgba(6, 214, 160, 0.18), rgba(6, 214, 160, 0.06));
+}
+
+.dispute-card .btn-group { margin-top: 0.8rem; }
+
+.dispute-waiting {
+    border-color: #ffd166;
+    background: linear-gradient(135deg, rgba(255, 209, 102, 0.15), rgba(255, 209, 102, 0.04));
+}
+
+.dispute-title {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #06d6a0;
+    margin-bottom: 0.4rem;
+}
+
+.dispute-waiting .dispute-title { color: #ffd166; }
+
+.dispute-info { color: #e8e8f0; margin-bottom: 0.3rem; }
+
+.dispute-scores { color: #a8b2d1; }
+
+.dispute-scores strong { color: #06d6a0; }
+
+.played-games {
+    max-width: 800px;
+    margin: 0 auto 1.5rem;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.8rem;
+    padding: 0.8rem 1rem;
+}
+
+.played-games.hidden { display: none; }
+
+.played-games summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: #a8b2d1;
+}
+
+.played-games[open] summary { margin-bottom: 0.8rem; color: #ffd166; }
+
+.played-games .match-row { flex-wrap: wrap; }
+
 /* Next-game overlay */
 .next-overlay {
     position: fixed;
@@ -681,6 +800,19 @@ h1, h2, h3 {
 
 .game-pending { background: rgba(255, 255, 255, 0.05); }
 .game-done    { background: rgba(6, 214, 160, 0.08); }
+
+/* Match with a pending score-change request — needs a decision */
+.game-dispute {
+    background: rgba(255, 209, 102, 0.18);
+    border-left: 4px solid #ffd166;
+}
+
+.game-dispute-badge {
+    color: #ffd166;
+    font-weight: 700;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
 
 .game-activity {
     font-weight: 700;

@@ -35,7 +35,9 @@ Her administrerer du hele turneringen gjennom flere under-faner:
 
 ### 🏆 **score.html** — Poengregistrering & Romantikk
 En side med to ulike visninger som du kan bytte mellom:
-- **Enter Scores** — Registrer kampresultater med numeriske verdier eller vinn/tap
+- **Velg lag** — Første gang velger du laget ditt (huskes per mobil, kan byttes oppe til høyre)
+- **Enter Scores** — Registrer kampresultater med numeriske verdier eller vinn/tap — du ser kun ditt eget lags kamper
+- **📜 Spilte leker** — Foreslå endring på et ferdigspilt resultat; motstanderlaget må godkjenne (accept/decline) før noe endres. Mens forespørselen venter vises kampen med gul highlight under Active Games på dashboardet
 - **💕 Romantiske Observasjoner** — Legg til romantiske observasjoner direkte
 - Angre-funksjon for siste poengregistrering
 - Sanntidssynkronisering med dashboardet
